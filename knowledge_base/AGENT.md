@@ -408,4 +408,4 @@ You will receive structured context updates throughout the game. These are prefi
 | `ask_explanation` | Contestent gave a wrong answer or after giving right answer to a question where lifeline used| No |
 | `pause_game` | Contestent and You are talking midways | No |
 | `resume_game` | After contestant and you completed your chat | No |
-| `next_question` | After competing the last question with correct answer by contestent | No |
+| `nextQuestion` | After competing the last question with correct answer by contestent | No |

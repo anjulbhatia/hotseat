@@ -12,7 +12,7 @@ import { SquareUser } from 'lucide-react'
 const OPTION_LETTERS = ['A', 'B', 'C', 'D']
 
 export function GameplayScreen() {
-  const { state, dispatch, selectOption, resolveAnswer, activateFiftyFifty, activateSwap, activateSkip, goToScreen, nextQuestion } = useGame()
+  const { state, dispatch, selectOption, resolveAnswer, activateFiftyFifty, activateSkip, goToScreen, nextQuestion } = useGame()
   const { questions, currentQuestionIndex, selectedOption, answerState, lifelinesUsed, score, playerName } = state
 
   const lastQuestionIndexRef = useRef(-1)
@@ -20,7 +20,12 @@ export function GameplayScreen() {
   const [showAside, setShowAside] = useState(true)
   const [showExplanationDrawer, setShowExplanationDrawer] = useState(false)
   const [explanationText, setExplanationText] = useState('')
+  const [explanationSources, setExplanationSources] = useState<{url: string, title: string, description: string}[]>([])
+  const [expertLoading, setExpertLoading] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+
+  const handleExpertLifelineRef = useRef<() => Promise<void>>(async () => {})
+  const handleSwapLifelineRef = useRef<() => Promise<void>>(async () => {})
 
   const voice = useAppConversation({
     onChooseOption: (option: string) => {
@@ -30,9 +35,9 @@ export function GameplayScreen() {
     onChooseLifeline: (lifeline: '5050' | 'swap' | 'skip' | 'expert') => {
       console.log('[Voice] Using lifeline:', lifeline)
       if (lifeline === '5050') activateFiftyFifty()
-      else if (lifeline === 'swap') activateSwap(questions[currentQuestionIndex])
+      else if (lifeline === 'swap') handleSwapLifelineRef.current?.()
       else if (lifeline === 'skip') activateSkip()
-      else if (lifeline === 'expert') activateFiftyFifty()
+      else if (lifeline === 'expert') handleExpertLifelineRef.current?.()
     },
     onRepeatQuestion: () => {},
     onRepeatOptions: () => {},
@@ -43,7 +48,10 @@ export function GameplayScreen() {
     onGetExplanation: () => {},
     onPauseGame: () => {},
     onResumeGame: () => {},
-    onReadyForNextQuestion: () => nextQuestion(),
+    onReadyForNextQuestion: () => {
+      console.log('[Voice] Ready for next question')
+      nextQuestion()
+    },
   })
   const hasVoice = !!process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID
 
@@ -56,10 +64,13 @@ export function GameplayScreen() {
 
   // Send question when question changes
   useEffect(() => {
-    if (hasVoice && currentQuestionIndex !== lastQuestionIndexRef.current && currentQuestionIndex < questions.length) {
-      lastQuestionIndexRef.current = currentQuestionIndex
-      const q = questions[currentQuestionIndex]
-      voice.sendQuestion(q, currentQuestionIndex, score)
+    if (hasVoice && currentQuestionIndex >= 0 && questions.length > 0 && currentQuestionIndex < questions.length) {
+      if (currentQuestionIndex !== lastQuestionIndexRef.current) {
+        lastQuestionIndexRef.current = currentQuestionIndex
+        const q = questions[currentQuestionIndex]
+        console.log('[Gameplay] Sending Q' + (currentQuestionIndex + 1) + ':', q.question)
+        voice.sendQuestion(q, currentQuestionIndex, score)
+      }
     }
   }, [hasVoice, currentQuestionIndex, questions, score, voice])
 
@@ -94,10 +105,24 @@ export function GameplayScreen() {
     }
   }, [hasVoice, currentQuestionIndex, answerState, playerName, voice])
 
+  // Auto move to next question after correct answer
+  const nextQuestionRef = useRef(nextQuestion)
+  nextQuestionRef.current = nextQuestion
+
+  useEffect(() => {
+    if (answerState === 'correct' && currentQuestionIndex < 9) {
+      const timer = setTimeout(() => {
+        console.log('[Gameplay] Auto-moving to next question')
+        nextQuestionRef.current()
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [answerState, currentQuestionIndex])
+
   const currentQuestion = questions[currentQuestionIndex]
   const currentPrize = PRIZE_LADDER[currentQuestionIndex]
   const timerDuration = TIMERS[currentQuestionIndex]
-  const hasTimer = timerDuration !== null
+  const hasTimer = false // Timer disabled
 
   const timeLeftRef = useRef<number | null>(null)
 
@@ -106,6 +131,7 @@ export function GameplayScreen() {
       const newTimeLeft = timerDuration
       timeLeftRef.current = newTimeLeft
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setTimeLeft(newTimeLeft)
     }
   }, [currentQuestionIndex, hasTimer, answerState, timerDuration])
@@ -166,6 +192,7 @@ export function GameplayScreen() {
     if (!current) return
     
     dispatch({ type: 'USE_LIFELINE', lifeline: 'expert' })
+    setExpertLoading(true)
     
     try {
       const res = await fetch('/api/explanation', {
@@ -178,17 +205,47 @@ export function GameplayScreen() {
       })
       const data = await res.json()
       setExplanationText(data.explanation || `The correct answer is ${current.answer}`)
+      setExplanationSources(data.sources || [])
       setShowExplanationDrawer(true)
     } catch (e) {
       setExplanationText(`The correct answer is ${current.answer}`)
+      setExplanationSources([])
       setShowExplanationDrawer(true)
+    } finally {
+      setExpertLoading(false)
     }
   }
+
+  const handleSwapLifeline = async () => {
+    if (answerState !== 'idle') return
+    const current = questions[currentQuestionIndex]
+    if (!current) return
+    
+    dispatch({ type: 'USE_LIFELINE', lifeline: 'swap' })
+    
+    try {
+      const res = await fetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: state.category })
+      })
+      const data = await res.json()
+      if (data.questions && data.questions.length > 0) {
+        const randomQ = data.questions[Math.floor(Math.random() * data.questions.length)]
+        dispatch({ type: 'SWAP_QUESTION', question: randomQ })
+      }
+    } catch (e) {
+      activateSkip()
+    }
+  }
+
+  handleExpertLifelineRef.current = handleExpertLifeline
+  handleSwapLifelineRef.current = handleSwapLifeline
 
   const handleUseLifeline = (id: string) => {
     if (answerState !== 'idle') return
     if (id === '5050') activateFiftyFifty()
-    else if (id === 'swap') activateSkip()
+    else if (id === 'swap') handleSwapLifeline()
     else if (id === 'expert') handleExpertLifeline()
   }
 
@@ -231,7 +288,7 @@ export function GameplayScreen() {
                     background: timeLeft <= 10 ? 'hsl(0, 72%, 45%)' : timeLeft <= 20 ? 'hsl(38, 80%, 55%)' : 'hsl(239, 84%, 67%)'
                   }}
                   initial={{ width: '100%' }}
-                  animate={{ width: `${(timeLeft / timerDuration) * 100}%` }}
+                  animate={{ width: `${(timeLeft / (timerDuration || 30)) * 100}%` }}
                   transition={{ duration: 1 }}
                 />
               </div>
@@ -412,12 +469,47 @@ export function GameplayScreen() {
       </Drawer>
 
       <Drawer open={showExplanationDrawer} onClose={() => setShowExplanationDrawer(false)} pos="right" size="full">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Explanation</span>
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Expert Advice</span>
+          {expertLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {explanationText}
-        </p>
+        
+        <div className="mb-4">
+          <p className="text-white text-base leading-relaxed">
+            {explanationText}
+          </p>
+        </div>
+
+        {explanationSources.length > 0 && (
+          <div>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-3">Sources</span>
+            <div className="space-y-3">
+              {explanationSources.map((source, i) => (
+                <a
+                  key={i}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 border transition-colors hover:bg-white/5"
+                  style={{
+                    backgroundColor: 'hsl(0, 0%, 5%)',
+                    borderColor: 'hsl(0, 0%, 12%)'
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'hsl(239, 84%, 67%)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{source.title}</p>
+                      <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{source.description}</p>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </Drawer>
     </div>
   )

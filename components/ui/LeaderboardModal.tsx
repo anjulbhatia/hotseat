@@ -40,38 +40,50 @@ export function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div 
-        className="absolute inset-0 bg-black/80" 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
         onClick={onClose}
       />
       
       <div 
         className="relative w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
         style={{ 
-          backgroundColor: 'hsl(0, 0%, 3%)',
-          border: '1px solid hsl(0, 0%, 12%)',
+          backgroundColor: '#050508',
+          border: '1px solid #1A1A1A',
           borderRadius: '8px'
         }}
       >
-        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'hsl(0, 0%, 12%)' }}>
-          <h2 className="text-white text-lg font-semibold">Hall of the Wise</h2>
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[150px] bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.08)_0%,transparent_70%)] pointer-events-none" 
+        />
+
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#1A1A1A' }}>
+          <div className="text-center flex-1">
+            <h2 
+              className="text-white text-xl font-semibold" 
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
+              Hall of the Wise
+            </h2>
+            <p className="text-[#444] text-xs mt-0.5">Top 50 players</p>
+          </div>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-white transition-colors"
+            className="text-[#333] hover:text-[#666] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex gap-2 flex-wrap p-3 border-b" style={{ borderColor: 'hsl(0, 0%, 12%)' }}>
+        <div className="flex gap-2 flex-wrap p-4 border-b" style={{ borderColor: '#1A1A1A' }}>
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
-              className="px-3 py-1 text-xs uppercase tracking-widest transition-all rounded-sm"
+              className="px-3 py-1.5 text-xs uppercase tracking-widest transition-all rounded-sm"
               style={{
-                background: filter === cat ? 'hsla(45, 80%, 50%, 0.15)' : 'hsl(0, 0%, 8%)',
-                border: `1px solid ${filter === cat ? 'hsl(45, 80%, 50%)' : 'hsl(0, 0%, 15%)'}`,
-                color: filter === cat ? 'hsl(45, 80%, 50%)' : 'hsl(0, 0%, 50%)',
+                background: filter === cat ? 'rgba(212,175,55,0.15)' : '#0A0A0F',
+                border: `1px solid ${filter === cat ? '#D4AF37' : '#1A1A1A'}`,
+                color: filter === cat ? '#D4AF37' : '#444',
               }}
             >
               {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
@@ -81,24 +93,24 @@ export function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
+            <div className="text-center py-8 text-[#333] text-sm">Loading scores...</div>
           ) : sorted.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground text-sm mb-4">No scores yet. Be the first!</p>
+              <p className="text-[#333] text-sm mb-4">No scores yet. Be the first.</p>
               <button
                 onClick={() => { onClose(); resetGame(); }}
-                className="px-6 py-2 text-sm font-semibold tracking-widest uppercase"
+                className="px-8 py-3 text-sm font-semibold tracking-widest uppercase"
                 style={{ 
-                  background: 'hsl(45, 80%, 50%)', 
-                  color: 'hsl(0, 0%, 5%)',
-                  borderRadius: '4px'
+                  background: 'linear-gradient(135deg, #D4AF37, #8B6914)', 
+                  color: '#050508',
+                  borderRadius: '2px'
                 }}
               >
                 Play Now
               </button>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: 'hsl(0, 0%, 10%)' }}>
+            <div className="divide-y" style={{ borderColor: '#111' }}>
               {sorted.map((entry, i) => (
                 <LeaderboardRow
                   key={i}
@@ -123,18 +135,21 @@ function LeaderboardRow({
   isYou: boolean
 }) {
   const isTop3 = rank <= 3
-  const rankColor = isTop3 ? RANK_COLORS[rank - 1] : 'hsl(0, 0%, 50%)'
+  const rankColor = isTop3 ? RANK_COLORS[rank - 1] : '#333'
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3"
+      className="flex items-center gap-4 px-4 py-3 transition-colors"
       style={{
-        background: isYou ? 'hsla(45, 80%, 50%, 0.07)' : 'transparent',
+        background: isYou ? 'rgba(212,175,55,0.07)' : rank <= 3 ? `${rankColor}08` : 'transparent',
+        border: `1px solid ${isYou ? '#D4AF37' : rank <= 3 ? `${rankColor}30` : 'transparent'}`,
+        borderRadius: '3px',
+        margin: '0 4px',
       }}
     >
       <div
-        className="w-6 text-xs font-bold text-center flex-shrink-0"
-        style={{ color: rankColor }}
+        className="w-8 text-xs font-bold text-center flex-shrink-0"
+        style={{ color: rankColor, fontFamily: 'Georgia, serif' }}
       >
         {isTop3 ? RANK_LABELS[rank - 1] : rank}
       </div>
@@ -142,28 +157,28 @@ function LeaderboardRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span
-            className="text-sm truncate"
-            style={{ color: isYou ? 'hsl(45, 80%, 50%)' : 'hsl(0, 0%, 80%)' }}
+            className="text-sm font-medium truncate"
+            style={{ color: isYou ? '#D4AF37' : '#CCC' }}
           >
             {entry.name}
           </span>
           {isYou && (
             <span
-              className="text-[9px] px-1.5 py-0.5 rounded"
-              style={{ background: 'hsla(45, 80%, 50%, 0.2)', color: 'hsl(45, 80%, 50%)' }}
+              className="text-[10px] px-1.5 py-0.5 rounded-sm"
+              style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37' }}
             >
               you
             </span>
           )}
         </div>
-        <div className="text-muted-foreground text-xs capitalize mt-0.5">
+        <div className="text-[#333] text-xs capitalize mt-0.5">
           {CATEGORY_LABELS[entry.category]} · {entry.questionsCorrect}/10
         </div>
       </div>
 
       <div
         className="text-sm font-semibold flex-shrink-0"
-        style={{ color: isTop3 ? rankColor : 'hsl(0, 0%, 60%)' }}
+        style={{ color: isTop3 ? rankColor : '#666', fontFamily: 'Georgia, serif' }}
       >
         {formatPrize(entry.score)}
       </div>

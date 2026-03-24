@@ -124,10 +124,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (category) {
       dispatch({ type: 'SET_CATEGORY', category })
       try {
+        console.log('[GameContext] Fetching questions for:', category)
         const questions = await fetchQuestions(category)
+        console.log('[GameContext] Got questions:', questions.length)
         dispatch({ type: 'SET_QUESTIONS', questions })
       } catch (e) {
-        console.error('Failed to fetch questions:', e)
+        console.error('[GameContext] Failed to fetch questions:', e)
+        alert('Failed to load questions. Please check API configuration.')
+        return
       }
     }
     goToScreen('game')
