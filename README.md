@@ -1,4 +1,4 @@
-# WiseOrOut
+# HotSeat
 
 > Ten questions. One shot. Are you wise enough — or are you out?
 

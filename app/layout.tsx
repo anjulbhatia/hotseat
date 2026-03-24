@@ -14,7 +14,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "WiseOrOut",
+  title: "HotSeat",
   description: "Ten questions. One shot. Are you wise enough — or are you out?",
 };
 

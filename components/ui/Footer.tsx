@@ -8,7 +8,7 @@ export function Footer({ playerName }: FooterProps) {
   return (
     <footer className="absolute bottom-2 left-6 right-6 flex max-sm:flex-col justify-between items-center px-4 py-2" style={{ borderColor: 'hsl(0, 0%, 12%)' }}>
       <div className="flex items-center gap-2 uppercase tracking-[0.15em]">
-        <span className="text-xs font-mono text-muted-foreground/70">WISE OR OUT</span>
+        <span className="text-xs font-mono text-muted-foreground/70">HOTSEAT</span>
         <span className="text-muted-foreground/30">|</span>
         <span className="text-xs font-mono text-muted-foreground/50 space-x-1">
         <span>Powered by</span>

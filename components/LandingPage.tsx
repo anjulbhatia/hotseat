@@ -18,7 +18,7 @@ const CATEGORY_META: Record<Category, { icon: string; color: string; label: stri
 }
 
 const TEXT_LINES = [
-  "Welcome to WiseOrOut",
+  "Welcome to HotSeat",
   "An interactive quiz to find out if you're wise",
   "The game is simple",
   "10 questions",
